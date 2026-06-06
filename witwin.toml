@@ -2,6 +2,7 @@ id = "witwin.splatting"
 name = "WiTwin Splatting"
 version = "0.1.0"
 description = "First-party Gaussian Splatting renderers and data loaders."
+repository = "https://github.com/witwin-ai/wt_splatting"
 enabled = true
 
 [engines]
