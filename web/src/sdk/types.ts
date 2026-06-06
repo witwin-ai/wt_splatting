@@ -39,11 +39,20 @@ export interface BinaryFetchOptions {
   onProgress?: (loaded: number, total?: number) => void;
 }
 
+export interface PointCloudResource {
+  ref: RenderResourceRef;
+  positions: Float32Array;
+  heat: Float32Array;
+  extraData: Array<Record<string, unknown>>;
+  count: number;
+  dispose?: () => void;
+}
+
 export interface ViewportAssetsApi {
   resolve(ref: RenderResourceRef | string): string;
   fetchBinary(ref: RenderResourceRef | string, options?: BinaryFetchOptions): Promise<ArrayBuffer>;
   loadVolume(ref: RenderResourceRef, options?: BinaryFetchOptions): Promise<unknown>;
-  loadPointCloud(ref: RenderResourceRef, options?: BinaryFetchOptions): Promise<unknown>;
+  loadPointCloud(ref: RenderResourceRef, options?: BinaryFetchOptions): Promise<PointCloudResource>;
   release(resource: { dispose?: () => void }): void;
 }
 

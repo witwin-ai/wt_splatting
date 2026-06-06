@@ -20,6 +20,7 @@ function shared(): WitwinViewportGlobals {
 
 export const React = shared().react;
 export const THREE = shared().three;
+export const useCallback = React.useCallback;
 export const useEffect = React.useEffect;
 export const useMemo = React.useMemo;
 export const useRef = React.useRef;
@@ -34,4 +35,5 @@ if (!drei?.Text) {
 
 export const useFrame = fiber.useFrame;
 export const useThree = fiber.useThree;
+export type ThreeEvent<TEvent = Event> = FiberTypes.ThreeEvent<TEvent>;
 export const Text = drei.Text;

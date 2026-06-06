@@ -1,6 +1,21 @@
 import { React, Text } from '../runtime';
 import type * as ThreeTypes from 'three';
 
+export function getComponentValue<T>(
+  component: any,
+  fieldName: string,
+  defaultValue: T
+): T {
+  const field = component.fields?.find((f: any) => f.name === fieldName);
+  if (field?.value !== undefined) {
+    return field.value;
+  }
+  if (component.values?.[fieldName] !== undefined) {
+    return component.values[fieldName];
+  }
+  return defaultValue;
+}
+
 export function Marker({ message, color = '#ffb020' }: { message: string; color?: string }) {
   return React.createElement(
     Text as any,

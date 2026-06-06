@@ -11,6 +11,8 @@ sys.path.insert(0, str(ROOT / "server"))
 sys.path.insert(0, str(ROOT / "plugins"))
 
 from witwin_server.features.assets.binary.service import BinaryAssetService
+from witwin_server.features.assets.binary.refs import POINT_CLOUD_FORMAT
+from witwin_server.features.library.service import LibraryHandler
 
 
 def test_component_defaults() -> None:
@@ -171,6 +173,69 @@ def test_3dgs_prefab_starts_empty_with_generate_button() -> None:
     assert values["splat_count"] == 0
 
 
+def test_pointcloud_component_is_owned_by_splatting_plugin() -> None:
+    from wt_splatting.components.point_cloud import PointCloudsComponent
+
+    component = PointCloudsComponent()
+    values = component.to_dict()["values"]
+
+    assert values["cloud"] is None
+    assert values["point_count"] == 0
+    assert values["colormap"] == "viridis"
+
+
+def test_pointcloud_export_publishes_resource_ref_not_cloud_id() -> None:
+    from wt_splatting.components.point_cloud import PointCloudsComponent
+
+    component = PointCloudsComponent()
+    component._owner = _Owner(object_id="pointcloud-object")
+    component.set_points([[0, 0, 0], [1, 0, 0]], [0.25, 0.75])
+
+    result = component.export_point_cloud()
+    values = component.to_dict()["values"]
+
+    assert result.startswith("Cached point cloud:")
+    assert values["cloud"]["kind"] == "point_cloud"
+    assert values["cloud"]["format"] == POINT_CLOUD_FORMAT
+    assert "cloud_id" not in values
+    assert _asset_service(component).get_bytes(values["cloud"]["assetId"]) is not None
+    assert _component_update_fields(component) >= {"cloud"}
+
+
+def test_pointcloud_prefab_contributed_by_splatting_plugin() -> None:
+    from wt_splatting.library_items import _make_pointcloud_demo
+
+    obj = _make_pointcloud_demo(_Context(name="Point Cloud"))
+    component = obj.get_component("PointClouds")
+    values = component.to_dict()["values"]
+
+    assert obj.mesh_type == "Empty"
+    assert values["point_count"] == 1000
+    assert values["cloud"] is None
+
+
+def test_pointcloud_library_prefab_exports_after_scene_attach() -> None:
+    import asyncio
+    import wt_splatting.library_items
+
+    server = _LibraryServer()
+    library = LibraryHandler(server)
+    wt_splatting.library_items.register()
+
+    result = asyncio.run(
+        library._handle_create_from_library(
+            {"item_id": "pointclouds", "position": [0, 0, 0]},
+            websocket=None,
+        )
+    )
+
+    obj = server.scene.get_object(result["object_id"])
+    values = obj.get_component("PointClouds").to_dict()["values"]
+
+    assert values["cloud"]["kind"] == "point_cloud"
+    assert values["cloud"]["uri"].startswith("/scenes/default/assets/")
+
+
 def test_component_generate_random_3dgs_sets_splat_ref() -> None:
     from wt_splatting.components.splat_renderer import GaussianSplatRendererComponent
 
@@ -255,10 +320,11 @@ def _tiny_ply() -> bytes:
 
 
 class _Context:
-    name = "Demo Splats"
-    position = [0.0, 0.0, 0.0]
-    parent_id = None
-    scene = None
+    def __init__(self, name: str = "Demo Splats") -> None:
+        self.name = name
+        self.position = [0.0, 0.0, 0.0]
+        self.parent_id = None
+        self.scene = None
 
 
 class _BinaryAssets:
@@ -281,10 +347,30 @@ class _Scene:
 
 
 class _Owner:
-    id = "splat-object"
+    def __init__(self, object_id: str = "splat-object") -> None:
+        self.id = object_id
+        self.scene = _Scene()
+
+
+class _LibraryServer:
+    verbose = False
+    main_scene_id = "default"
 
     def __init__(self) -> None:
-        self.scene = _Scene()
+        from witwin_server.core import Scene
+
+        self.scene = Scene(scene_id=self.main_scene_id, role="main")
+        self.scene._server = self
+        self.handlers = {"binary_assets": _BinaryAssets()}
+
+    def get_scene(self, scene_id: str | None = None):
+        return self.scene
+
+    async def broadcast(self, *args, **kwargs) -> None:
+        pass
+
+    def _safe_broadcast(self, *args, **kwargs) -> None:
+        pass
 
 
 def _asset_service(component):

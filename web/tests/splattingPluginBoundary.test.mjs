@@ -155,6 +155,12 @@ test('matches empty GaussianSplatRenderer components so in-component Generate ca
   assert.doesNotMatch(readPluginFile('web/src/gizmos/SplattingVisualizer.tsx'), /return !!findSplatComponent\(object\);/);
 });
 
+test('owns point cloud viewport visualization after package split', () => {
+  assert.equal(pluginFileExists('web/src/gizmos/PointCloudVisualizer.tsx'), true);
+  assert.match(readPluginFile('web/src/activate.tsx'), /witwin\.splatting\.pointcloud/);
+  assert.match(readPluginFile('web/src/activate.tsx'), /pointCloudVisualizerConfig/);
+});
+
 test('installs SparkRenderer into the R3F scene for 3DGS SplatMesh rendering', () => {
   const sparkVisualizer = readPluginFile('web/src/gizmos/SparkSplatVisualizer.tsx');
 
