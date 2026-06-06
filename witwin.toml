@@ -1,0 +1,19 @@
+id = "witwin.splatting"
+name = "WiTwin Splatting"
+version = "0.1.0"
+description = "First-party Gaussian Splatting renderers and data loaders."
+enabled = true
+
+[engines]
+witwin = "^1.0.0"
+
+[web]
+root = "web"
+
+[contributes.viewport.host]
+entry = "viewport.js"
+sdkVersion = "1.0.0"
+
+[permissions]
+frontend = true
+shader = true
