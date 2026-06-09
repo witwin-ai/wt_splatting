@@ -5,6 +5,7 @@ import numpy as np
 from witwin_server import Library, SceneObject
 
 from .components.point_cloud import PointCloudsComponent
+from .components.reconstruction import SplatReconstructionComponent
 from .components.splat_renderer import GaussianSplatRendererComponent
 
 
@@ -56,6 +57,13 @@ def _make_pointcloud_demo(ctx):
     return obj
 
 
+def _make_3dgs_reconstruction(ctx):
+    obj = _splat_object(ctx.name)
+    obj.add_component(SplatReconstructionComponent())
+    obj.get_component("GaussianSplatRenderer").set_field("splat_kind", "3dgs", force=True)
+    return obj
+
+
 def register() -> None:
     Library.register_category(_CATEGORY, "Splatting", icon="sparkles", order=22)
     Library.register_item(
@@ -75,6 +83,15 @@ def register() -> None:
         object_type="empty",
         factory=_make_2dgs_demo,
         description="2D Gaussian Splat renderer with an in-component random generator",
+    )
+    Library.register_item(
+        "splatting_3dgs_reconstruction",
+        "3DGS Reconstruction",
+        _CATEGORY,
+        icon="sparkles",
+        object_type="empty",
+        factory=_make_3dgs_reconstruction,
+        description="Image sequence reconstruction workflow for Spark-compatible 3D Gaussian Splats",
     )
     Library.register_item(
         "pointclouds",
