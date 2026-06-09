@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import struct
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Sequence
@@ -139,7 +140,9 @@ def _registered_image_count(sparse_dir: Path) -> int:
         if images_txt.exists():
             return _count_images_txt(images_txt)
         if images_bin.exists():
-            count = _count_images_with_pycolmap(model_dir)
+            count = _count_images_bin(images_bin)
+            if count is None:
+                count = _count_images_with_pycolmap(model_dir)
             return count if count is not None else 0
     return 0
 
@@ -152,6 +155,16 @@ def _count_images_txt(path: Path) -> int:
         if stripped and not stripped.startswith("#") and len(tokens) >= 10:
             count += 1
     return count
+
+
+def _count_images_bin(path: Path) -> int | None:
+    try:
+        header = path.read_bytes()[:8]
+        if len(header) != 8:
+            return None
+        return int(struct.unpack("<Q", header)[0])
+    except Exception:
+        return None
 
 
 def _count_images_with_pycolmap(model_dir: Path) -> int | None:

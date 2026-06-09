@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 import tomllib
 import os
+import struct
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -286,6 +287,30 @@ def test_colmap_runner_rejects_missing_dense_output(tmp_path: Path) -> None:
 
     assert result.success is False
     assert "missing dense output" in result.message
+
+
+def test_colmap_runner_counts_binary_sparse_model_without_pycolmap(monkeypatch, tmp_path: Path) -> None:
+    from wt_splatting.reconstruction.colmap import ColmapRunner
+    from wt_splatting.reconstruction.config import ColmapConfig
+    from wt_splatting.reconstruction.images import ImageManifest
+
+    monkeypatch.setitem(sys.modules, "pycolmap", None)
+
+    def ok_runner(args, **kwargs):
+        if args[1] == "image_undistorter":
+            (run_dir / "colmap" / "dense" / "sparse").mkdir(parents=True)
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    run_dir = tmp_path / "run"
+    sparse_model = run_dir / "colmap" / "sparse" / "0"
+    sparse_model.mkdir(parents=True)
+    (sparse_model / "images.bin").write_bytes(struct.pack("<Q", 3))
+    manifest = ImageManifest(tmp_path / "images", tmp_path / "staged", 3, [], [])
+
+    result = ColmapRunner(run_process=ok_runner).run(ColmapConfig(), manifest, run_dir)
+
+    assert result.success is True
+    assert result.registered_images == 3
 
 
 def test_gsplat_backend_reports_missing_dependencies(monkeypatch) -> None:
