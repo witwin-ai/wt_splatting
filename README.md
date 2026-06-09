@@ -23,11 +23,26 @@ Runtime files are written under:
 
 The renderable `.ply` is registered through the binary asset service after reconstruction. Visible `results/` output should be created only by an explicit export flow.
 
+## 3DGS to Mesh
+
+The **Splatting > 3DGS Meshization** Library item creates one Empty scene object with:
+
+- `SplatMeshConversion`: 3DGS `.ply` input, density-grid mesh extraction settings, output status, and the `Convert 3DGS to Mesh` solver button.
+
+Meshization reads a 3DGS PLY inside the opened Project and writes a triangle mesh PLY under:
+
+```text
+.witwin/runtime/wt_splatting/mesh/<run_id>/
+```
+
+The V1 extractor builds a Gaussian density field, runs Marching Cubes, and colors mesh vertices from nearby splats. This is intended as a quick collision/proxy/inspection mesh, not a production retopology pass.
+
 ## Prerequisites
 
 - COLMAP installed and available as `colmap`, or set the component `colmap_binary` field to an executable path.
 - PyTorch with CUDA for practical training. CPU mode is intended for small debugging runs only.
 - `gsplat` installed in the solver Python environment.
+- `scikit-image` installed in the solver Python environment for 3DGS-to-mesh extraction.
 - A gsplat training adapter configured through one of:
   - `WT_SPLATTING_GSPLAT_ADAPTER=module:function`
   - `WT_SPLATTING_GSPLAT_TRAIN_SCRIPT=C:\path\to\train.py`
@@ -49,6 +64,7 @@ V1 supports:
 - unordered or sequential image folders
 - COLMAP-based camera estimation
 - 3DGS `.ply` export
+- density-field 3DGS `.ply` to triangle mesh `.ply` conversion
 - in-Studio preview through Spark
 
 V1 does not support:
@@ -75,4 +91,10 @@ $env:WT_SPLATTING_SMOKE_PROJECT = "E:\path\to\project"
 $env:WT_SPLATTING_SMOKE_IMAGE_DIR = "assets\splatting\captures\demo\images"
 python -m pytest plugins\wt_splatting\tests\test_reconstruction.py -m requires_colmap -v
 python plugins\wt_splatting\tools\reconstruct_smoke.py --project $env:WT_SPLATTING_SMOKE_PROJECT --image-dir $env:WT_SPLATTING_SMOKE_IMAGE_DIR
+```
+
+Run meshization on an existing 3DGS PLY:
+
+```powershell
+python plugins\wt_splatting\tools\meshize_smoke.py --project $env:WT_SPLATTING_SMOKE_PROJECT --splat-path "E:\path\to\project\.witwin\runtime\wt_splatting\recon\run\reconstruction.ply"
 ```

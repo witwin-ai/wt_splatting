@@ -3,7 +3,9 @@ from __future__ import annotations
 import numpy as np
 
 from witwin_server import Library, SceneObject
+from witwin_server.core.components import MeshComponent
 
+from .components.mesh_conversion import SplatMeshConversionComponent
 from .components.point_cloud import PointCloudsComponent
 from .components.reconstruction import SplatReconstructionComponent
 from .components.splat_renderer import GaussianSplatRendererComponent
@@ -60,7 +62,15 @@ def _make_pointcloud_demo(ctx):
 def _make_3dgs_reconstruction(ctx):
     obj = _splat_object(ctx.name)
     obj.add_component(SplatReconstructionComponent())
+    obj.add_component(SplatMeshConversionComponent())
     obj.get_component("GaussianSplatRenderer").set_field("splat_kind", "3dgs", force=True)
+    return obj
+
+
+def _make_3dgs_meshization(ctx):
+    obj = SceneObject(name=ctx.name, mesh_type="Custom")
+    obj.add_component(MeshComponent(mesh_type="Custom"))
+    obj.add_component(SplatMeshConversionComponent())
     return obj
 
 
@@ -92,6 +102,15 @@ def register() -> None:
         object_type="empty",
         factory=_make_3dgs_reconstruction,
         description="Image sequence reconstruction workflow for Spark-compatible 3D Gaussian Splats",
+    )
+    Library.register_item(
+        "splatting_3dgs_meshization",
+        "3DGS Meshization",
+        _CATEGORY,
+        icon="triangle",
+        object_type="mesh",
+        factory=_make_3dgs_meshization,
+        description="Convert a 3DGS PLY into a triangle mesh using density-field marching cubes",
     )
     Library.register_item(
         "pointclouds",

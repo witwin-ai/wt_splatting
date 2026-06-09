@@ -472,7 +472,7 @@ def test_solver_manifest_declares_reconstruction_solver() -> None:
 
     assert solver["title"] == "3DGS Reconstruction"
     assert solver["entry"] == "solver_host.py"
-    assert solver["lifecycle"] == "cold"
+    assert solver["lifecycle"] == "warm"
     assert solver["maxParallel"] == 1
     assert solver["runtime"]["python"] == "${backend:python}"
     assert solver["capabilities"]["cancel"] is True

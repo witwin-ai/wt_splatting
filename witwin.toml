@@ -19,7 +19,21 @@ sdkVersion = "1.0.0"
 id = "witwin.splatting.reconstruct_3dgs"
 title = "3DGS Reconstruction"
 entry = "solver_host.py"
-lifecycle = "cold"
+lifecycle = "warm"
+maxParallel = 1
+
+[contributes.solvers.runtime]
+python = "${backend:python}"
+
+[contributes.solvers.capabilities]
+cancel = true
+partials = true
+
+[[contributes.solvers]]
+id = "witwin.splatting.splat_to_mesh"
+title = "3DGS to Mesh"
+entry = "mesh_solver_host.py"
+lifecycle = "warm"
 maxParallel = 1
 
 [contributes.solvers.runtime]
