@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Callable
 from uuid import uuid4
@@ -46,23 +47,29 @@ class ReconstructionPipeline:
         run_dir = project_root / ".witwin" / "runtime" / "wt_splatting" / "recon" / run_id
         run_dir.mkdir(parents=True, exist_ok=True)
         emit = progress or (lambda *_: None)
+        phase = "validate_images"
 
         try:
+            phase = "validate_images"
             emit(0.05, "validate images")
             manifest = build_image_manifest(project_root, config.image, run_dir)
 
+            phase = "run_colmap"
             emit(0.25, "build COLMAP model")
             colmap_result = self._colmap_runner.run(config.colmap, manifest, run_dir)
             if not colmap_result.success:
                 raise ReconstructionPipelineError(run_id, "run_colmap", colmap_result.message)
 
+            phase = "train_gsplat"
             emit(0.60, "train gsplat model")
             train_result = self._gsplat_backend.train(config.training, colmap_result, run_dir, emit)
             if not train_result.success or train_result.export_path is None:
                 raise ReconstructionPipelineError(run_id, "train_gsplat", train_result.message)
 
+            phase = "export_splats"
             emit(0.90, "export splats")
-            exported = validate_spark_export(train_result.export_path)
+            final_export = self._final_export_path(train_result.export_path, config)
+            exported = validate_spark_export(final_export)
 
             result = ReconstructionResult(
                 run_id=run_id,
@@ -71,13 +78,21 @@ class ReconstructionPipeline:
                 format=exported.format,
                 summary=f"Reconstructed {exported.splat_count} splats from {manifest.image_count} images",
             )
+            phase = "write_result"
             emit(1.0, "write result")
             self._write_result(run_dir, result, config)
             return result
         except ReconstructionPipelineError:
             raise
         except Exception as exc:
-            raise ReconstructionPipelineError(run_id, "validate_images", str(exc)) from exc
+            raise ReconstructionPipelineError(run_id, phase, str(exc)) from exc
+
+    def _final_export_path(self, export_path: Path, config: ReconstructionConfig) -> Path:
+        source = Path(export_path)
+        target = source.with_name(f"{config.export.output_name}.ply")
+        if source.resolve() != target.resolve():
+            shutil.copy2(source, target)
+        return target
 
     def _write_result(self, run_dir: Path, result: ReconstructionResult, config: ReconstructionConfig) -> None:
         payload = {

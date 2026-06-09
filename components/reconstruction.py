@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -75,7 +76,7 @@ class SplatReconstructionComponent(Component):
             Notifications.error("Splatting", message)
             return f"Reconstruction failed: {message}"
 
-        outputs = dict(getattr(run, "outputs", None) or {})
+        outputs = _solver_payload(dict(getattr(run, "outputs", None) or {}))
         try:
             self._bind_solver_outputs(outputs, config)
         except Exception as exc:
@@ -122,7 +123,7 @@ class SplatReconstructionComponent(Component):
             self._asset_service(),
             splat_path,
             project_root=config["project_root"],
-            asset_id=f"{self.output_name}-{outputs.get('run_id') or 'reconstruction'}.ply",
+            asset_id=f"{_asset_token(str(self.output_name))}-{_asset_token(str(outputs.get('run_id') or 'reconstruction'))}.ply",
         )
         renderer = self._renderer_component()
         if renderer is None or not hasattr(renderer, "set_splats_ref"):
@@ -182,3 +183,15 @@ class SplatReconstructionComponent(Component):
                 field_name=field_name,
                 value=value,
             )
+
+
+def _solver_payload(outputs: dict[str, Any]) -> dict[str, Any]:
+    result = outputs.get("result")
+    if isinstance(result, dict):
+        return dict(result)
+    return outputs
+
+
+def _asset_token(value: str) -> str:
+    token = re.sub(r"[^A-Za-z0-9_.-]+", "-", value.strip()).strip(".-")
+    return token or "reconstruction"

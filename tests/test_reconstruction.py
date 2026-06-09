@@ -222,12 +222,17 @@ def test_colmap_runner_detects_sparse_model(tmp_path: Path) -> None:
 
     def ok_runner(args, **kwargs):
         calls.append(args)
+        if args[1] == "image_undistorter":
+            (run_dir / "colmap" / "dense" / "sparse").mkdir(parents=True)
         return SimpleNamespace(returncode=0, stdout="", stderr="")
 
     run_dir = tmp_path / "run"
     sparse_model = run_dir / "colmap" / "sparse" / "0"
     sparse_model.mkdir(parents=True)
-    (sparse_model / "images.bin").write_bytes(b"registered")
+    (sparse_model / "images.txt").write_text(
+        "1 1 0 0 0 0 0 0 1 frame_1.jpg\n\n2 1 0 0 0 0 0 0 1 frame_2.jpg\n\n",
+        encoding="utf-8",
+    )
     manifest = ImageManifest(tmp_path / "images", tmp_path / "staged", 3, [], [])
 
     result = ColmapRunner(run_process=ok_runner).run(ColmapConfig(), manifest, run_dir)
@@ -236,6 +241,51 @@ def test_colmap_runner_detects_sparse_model(tmp_path: Path) -> None:
     assert result.sparse_dir == run_dir / "colmap" / "sparse"
     assert result.dense_dir == run_dir / "colmap" / "dense"
     assert len(calls) == 4
+
+
+def test_colmap_runner_rejects_under_registered_text_model(tmp_path: Path) -> None:
+    from wt_splatting.reconstruction.colmap import ColmapRunner
+    from wt_splatting.reconstruction.config import ColmapConfig
+    from wt_splatting.reconstruction.images import ImageManifest
+
+    def ok_runner(args, **kwargs):
+        if args[1] == "image_undistorter":
+            (run_dir / "colmap" / "dense" / "sparse").mkdir(parents=True)
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    run_dir = tmp_path / "run"
+    sparse_model = run_dir / "colmap" / "sparse" / "0"
+    sparse_model.mkdir(parents=True)
+    (sparse_model / "images.txt").write_text("1 1 0 0 0 0 0 0 1 frame_1.jpg\n\n", encoding="utf-8")
+    manifest = ImageManifest(tmp_path / "images", tmp_path / "staged", 3, [], [])
+
+    result = ColmapRunner(run_process=ok_runner).run(ColmapConfig(), manifest, run_dir)
+
+    assert result.success is False
+    assert "too few registered images" in result.message
+
+
+def test_colmap_runner_rejects_missing_dense_output(tmp_path: Path) -> None:
+    from wt_splatting.reconstruction.colmap import ColmapRunner
+    from wt_splatting.reconstruction.config import ColmapConfig
+    from wt_splatting.reconstruction.images import ImageManifest
+
+    def ok_runner(args, **kwargs):
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    run_dir = tmp_path / "run"
+    sparse_model = run_dir / "colmap" / "sparse" / "0"
+    sparse_model.mkdir(parents=True)
+    (sparse_model / "images.txt").write_text(
+        "1 1 0 0 0 0 0 0 1 frame_1.jpg\n\n2 1 0 0 0 0 0 0 1 frame_2.jpg\n\n",
+        encoding="utf-8",
+    )
+    manifest = ImageManifest(tmp_path / "images", tmp_path / "staged", 3, [], [])
+
+    result = ColmapRunner(run_process=ok_runner).run(ColmapConfig(), manifest, run_dir)
+
+    assert result.success is False
+    assert "missing dense output" in result.message
 
 
 def test_gsplat_backend_reports_missing_dependencies(monkeypatch) -> None:
@@ -257,6 +307,19 @@ def test_gsplat_training_config_serializes_reproducibly() -> None:
     payload = training_payload(GsplatTrainingConfig(device="cpu", max_steps=12, sh_degree=2))
 
     assert payload == {"device": "cpu", "max_steps": 12, "sh_degree": 2}
+
+
+def test_gsplat_backend_requires_adapter_before_training(monkeypatch) -> None:
+    from wt_splatting.reconstruction.gsplat_backend import GsplatBackend
+
+    monkeypatch.setattr("importlib.util.find_spec", lambda name: SimpleNamespace())
+    monkeypatch.delenv("WT_SPLATTING_GSPLAT_ADAPTER", raising=False)
+    monkeypatch.delenv("WT_SPLATTING_GSPLAT_TRAIN_SCRIPT", raising=False)
+
+    availability = GsplatBackend().check_available()
+
+    assert availability.available is False
+    assert "adapter" in availability.message
 
 
 def test_fake_gsplat_backend_receives_colmap_dense_dir(tmp_path: Path) -> None:
@@ -309,7 +372,7 @@ def test_pipeline_runs_fake_backends_and_writes_result(tmp_path: Path) -> None:
     )
 
     assert result.run_id == "run-fixed"
-    assert result.splat_path.name == "model.ply"
+    assert result.splat_path.name == "reconstruction.ply"
     assert result.splat_count == 1
     assert [message for _, message in progress] == [
         "validate images",
@@ -319,6 +382,26 @@ def test_pipeline_runs_fake_backends_and_writes_result(tmp_path: Path) -> None:
         "write result",
     ]
     assert (project / ".witwin" / "runtime" / "wt_splatting" / "recon" / "run-fixed" / "pipeline_result.json").exists()
+
+
+def test_pipeline_uses_output_name_for_final_ply(tmp_path: Path) -> None:
+    from wt_splatting.reconstruction.config import ReconstructionConfig
+    from wt_splatting.reconstruction.pipeline import ReconstructionPipeline
+
+    project, image_rel = _make_project_images(tmp_path, count=2)
+    pipeline = ReconstructionPipeline(
+        colmap_runner=_FakeColmapRunner(),
+        gsplat_backend=_FakeGsplatBackend(),
+        run_id_factory=lambda: "run-named",
+    )
+
+    result = pipeline.run(
+        ReconstructionConfig.from_component_values({"image_dir": image_rel, "output_name": "desk_scan"}),
+        project,
+    )
+
+    assert result.splat_path.name == "desk_scan.ply"
+    assert result.splat_path.exists()
 
 
 def test_pipeline_failure_preserves_run_id_and_phase(tmp_path: Path) -> None:
@@ -338,6 +421,23 @@ def test_pipeline_failure_preserves_run_id_and_phase(tmp_path: Path) -> None:
     assert exc.value.run_id == "run-failed"
     assert exc.value.phase == "run_colmap"
     assert "run_colmap" in str(exc.value)
+
+
+def test_pipeline_reports_export_phase_failures(tmp_path: Path) -> None:
+    from wt_splatting.reconstruction.config import ReconstructionConfig
+    from wt_splatting.reconstruction.pipeline import ReconstructionPipeline, ReconstructionPipelineError
+
+    project, image_rel = _make_project_images(tmp_path, count=2)
+    pipeline = ReconstructionPipeline(
+        colmap_runner=_FakeColmapRunner(),
+        gsplat_backend=_BadExportGsplatBackend(),
+        run_id_factory=lambda: "run-bad-export",
+    )
+
+    with pytest.raises(ReconstructionPipelineError) as exc:
+        pipeline.run(ReconstructionConfig.from_component_values({"image_dir": image_rel}), project)
+
+    assert exc.value.phase == "export_splats"
 
 
 def test_solver_manifest_declares_reconstruction_solver() -> None:
@@ -435,11 +535,13 @@ def test_component_reconstruct_calls_solver_and_binds_renderer(monkeypatch, tmp_
             status="succeeded",
             run_id="run-component",
             outputs={
-                "run_id": "run-component",
-                "splat_path": str(splat_path),
-                "splat_count": 1,
-                "format": "spark.ply",
-                "summary": "ok",
+                "result": {
+                    "run_id": "run-component",
+                    "splat_path": str(splat_path),
+                    "splat_count": 1,
+                    "format": "spark.ply",
+                    "summary": "ok",
+                },
             },
             error=None,
         )
@@ -467,6 +569,7 @@ def test_component_reconstruct_calls_solver_and_binds_renderer(monkeypatch, tmp_
 
 
 @pytest.mark.requires_colmap
+@pytest.mark.requires_gsplat
 @pytest.mark.skipif(
     os.environ.get("WT_SPLATTING_ENABLE_REAL_RECON") != "1"
     or not os.environ.get("WT_SPLATTING_SMOKE_PROJECT")
@@ -595,6 +698,16 @@ class _FakeGsplatBackend:
         export.parent.mkdir(parents=True)
         export.write_bytes(_tiny_ply())
         return GsplatTrainResult(success=True, export_path=export, message="ok")
+
+
+class _BadExportGsplatBackend:
+    def train(self, config, colmap_result, run_dir, progress):
+        from wt_splatting.reconstruction.gsplat_backend import GsplatTrainResult
+
+        export = run_dir / "gsplat" / "exports" / "model.ply"
+        export.parent.mkdir(parents=True)
+        export.write_bytes(b"not a ply")
+        return GsplatTrainResult(success=True, export_path=export, message="bad")
 
 
 def _tiny_ply() -> bytes:

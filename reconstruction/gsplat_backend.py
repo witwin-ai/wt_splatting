@@ -46,7 +46,13 @@ class GsplatBackend:
         missing = [name for name in ("torch", "gsplat") if importlib.util.find_spec(name) is None]
         if missing:
             return GsplatAvailability(False, missing, f"Missing dependencies: {', '.join(missing)}")
-        return GsplatAvailability(True, [], "torch and gsplat are available")
+        if self._adapter is None and not _configured_adapter():
+            return GsplatAvailability(
+                False,
+                ["gsplat_adapter"],
+                "Missing gsplat training adapter. Set WT_SPLATTING_GSPLAT_ADAPTER or WT_SPLATTING_GSPLAT_TRAIN_SCRIPT.",
+            )
+        return GsplatAvailability(True, [], "torch, gsplat, and training adapter are available")
 
     def train(
         self,
@@ -119,6 +125,10 @@ class GsplatBackend:
         raise RuntimeError(
             "No gsplat training adapter configured. Set WT_SPLATTING_GSPLAT_ADAPTER or WT_SPLATTING_GSPLAT_TRAIN_SCRIPT."
         )
+
+
+def _configured_adapter() -> bool:
+    return bool(os.environ.get("WT_SPLATTING_GSPLAT_ADAPTER", "").strip() or os.environ.get("WT_SPLATTING_GSPLAT_TRAIN_SCRIPT", "").strip())
 
 
 def _find_export(export_dir: Path) -> Path | None:

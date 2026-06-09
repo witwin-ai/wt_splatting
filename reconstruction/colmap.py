@@ -81,7 +81,6 @@ class ColmapRunner:
         dense_dir = colmap_dir / "dense"
         colmap_dir.mkdir(parents=True, exist_ok=True)
         sparse_dir.mkdir(parents=True, exist_ok=True)
-        dense_dir.mkdir(parents=True, exist_ok=True)
 
         if manifest.image_count < 2:
             return ColmapRunResult(False, sparse_dir, None, "too few registered images", registered_images=manifest.image_count)
@@ -121,6 +120,15 @@ class ColmapRunner:
                 commands=commands,
                 registered_images=registered_images,
             )
+        if not _has_dense_output(dense_dir):
+            return ColmapRunResult(
+                False,
+                sparse_dir,
+                None,
+                f"missing dense output: {dense_dir}",
+                commands=commands,
+                registered_images=registered_images,
+            )
         return ColmapRunResult(True, sparse_dir, dense_dir, "COLMAP model built", commands=commands, registered_images=registered_images)
 
 
@@ -128,10 +136,11 @@ def _registered_image_count(sparse_dir: Path) -> int:
     for model_dir in [sparse_dir / "0", sparse_dir]:
         images_bin = model_dir / "images.bin"
         images_txt = model_dir / "images.txt"
-        if images_bin.exists():
-            return 2
         if images_txt.exists():
             return _count_images_txt(images_txt)
+        if images_bin.exists():
+            count = _count_images_with_pycolmap(model_dir)
+            return count if count is not None else 0
     return 0
 
 
@@ -139,6 +148,26 @@ def _count_images_txt(path: Path) -> int:
     count = 0
     for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
         stripped = line.strip()
-        if stripped and not stripped.startswith("#"):
+        tokens = stripped.split()
+        if stripped and not stripped.startswith("#") and len(tokens) >= 10:
             count += 1
-    return max(0, count // 2)
+    return count
+
+
+def _count_images_with_pycolmap(model_dir: Path) -> int | None:
+    try:
+        import pycolmap
+    except Exception:
+        return None
+    try:
+        reconstruction = pycolmap.Reconstruction(str(model_dir))
+        if hasattr(reconstruction, "num_reg_images"):
+            value = reconstruction.num_reg_images()
+            return int(value() if callable(value) else value)
+        return int(len(getattr(reconstruction, "images", {}) or {}))
+    except Exception:
+        return None
+
+
+def _has_dense_output(dense_dir: Path) -> bool:
+    return dense_dir.exists() and any(dense_dir.iterdir())
