@@ -15,6 +15,20 @@ root = "web"
 entry = "viewport.js"
 sdkVersion = "1.0.0"
 
+[[contributes.solvers]]
+id = "witwin.splatting.reconstruct_3dgs"
+title = "3DGS Reconstruction"
+entry = "solver_host.py"
+lifecycle = "cold"
+maxParallel = 1
+
+[contributes.solvers.runtime]
+python = "${backend:python}"
+
+[contributes.solvers.capabilities]
+cancel = true
+partials = true
+
 [permissions]
 frontend = true
 shader = true

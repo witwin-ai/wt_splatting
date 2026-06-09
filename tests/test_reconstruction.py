@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import tomllib
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -9,6 +10,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "server"))
 sys.path.insert(0, str(ROOT / "plugins"))
+
+from witwin_server.features.assets.binary.service import BinaryAssetService
 
 
 def test_reconstruction_component_defaults_and_solver_button() -> None:
@@ -336,12 +339,182 @@ def test_pipeline_failure_preserves_run_id_and_phase(tmp_path: Path) -> None:
     assert "run_colmap" in str(exc.value)
 
 
+def test_solver_manifest_declares_reconstruction_solver() -> None:
+    manifest = tomllib.loads((ROOT / "plugins" / "wt_splatting" / "witwin.toml").read_text(encoding="utf-8"))
+
+    solver = next(item for item in manifest["contributes"]["solvers"] if item["id"] == "witwin.splatting.reconstruct_3dgs")
+
+    assert solver["title"] == "3DGS Reconstruction"
+    assert solver["entry"] == "solver_host.py"
+    assert solver["lifecycle"] == "cold"
+    assert solver["maxParallel"] == 1
+    assert solver["runtime"]["python"] == "${backend:python}"
+    assert solver["capabilities"]["cancel"] is True
+    assert solver["capabilities"]["partials"] is True
+
+
+def test_solver_host_returns_serializable_result(monkeypatch, tmp_path: Path) -> None:
+    import wt_splatting.solver_host as solver_host
+    from wt_splatting.reconstruction.config import ReconstructionResult
+
+    class FakePipeline:
+        def run(self, config, project_root, progress):
+            progress(1.0, "done")
+            return ReconstructionResult(
+                run_id="run-host",
+                splat_path=Path(project_root) / ".witwin" / "runtime" / "wt_splatting" / "recon" / "run-host" / "model.ply",
+                splat_count=9,
+                summary="ok",
+            )
+
+    ctx = _SolverContext()
+    monkeypatch.setattr(solver_host, "ReconstructionPipeline", lambda: FakePipeline())
+
+    result = solver_host.solve(
+        ctx,
+        scene=None,
+        config={
+            "project_root": str(tmp_path),
+            "image": {"image_dir": "assets/images"},
+            "colmap": {},
+            "training": {},
+            "export": {},
+        },
+    )
+
+    assert result == {
+        "run_id": "run-host",
+        "splat_path": str(tmp_path / ".witwin" / "runtime" / "wt_splatting" / "recon" / "run-host" / "model.ply"),
+        "splat_count": 9,
+        "format": "spark.ply",
+        "summary": "ok",
+    }
+    assert ctx.progress_events == [(1.0, "done")]
+
+
+def test_register_runtime_file_accepts_only_reconstruction_runtime(tmp_path: Path) -> None:
+    from wt_splatting.io.loaders import register_3d_splats_runtime_file
+
+    project = tmp_path / "project"
+    runtime_file = project / ".witwin" / "runtime" / "wt_splatting" / "recon" / "run-1" / "model.ply"
+    runtime_file.parent.mkdir(parents=True)
+    runtime_file.write_bytes(_tiny_ply())
+    outside_runtime = project / ".witwin" / "runtime" / "other" / "model.ply"
+    outside_runtime.parent.mkdir(parents=True)
+    outside_runtime.write_bytes(_tiny_ply())
+
+    ref = register_3d_splats_runtime_file(BinaryAssetService(), runtime_file, project_root=project)
+
+    assert ref.kind == "gaussian_splats"
+    assert ref.format == "spark.ply"
+    assert ref.attributes["splat_kind"] == "3dgs"
+    with pytest.raises(ValueError):
+        register_3d_splats_runtime_file(BinaryAssetService(), outside_runtime, project_root=project)
+
+
+def test_component_reconstruct_calls_solver_and_binds_renderer(monkeypatch, tmp_path: Path) -> None:
+    from wt_splatting.components.reconstruction import SplatReconstructionComponent
+    from wt_splatting.components.splat_renderer import GaussianSplatRendererComponent
+
+    project = tmp_path / "project"
+    splat_path = project / ".witwin" / "runtime" / "wt_splatting" / "recon" / "run-component" / "model.ply"
+    splat_path.parent.mkdir(parents=True)
+    splat_path.write_bytes(_tiny_ply())
+    owner = _ComponentOwner(project_root=project)
+    reconstruction = SplatReconstructionComponent()
+    renderer = GaussianSplatRendererComponent()
+    owner.add_component(reconstruction)
+    owner.add_component(renderer)
+    reconstruction.set_field("image_dir", "assets/images", force=True)
+    calls = []
+
+    def fake_solve(solver_id, **kwargs):
+        calls.append((solver_id, kwargs))
+        return SimpleNamespace(
+            status="succeeded",
+            run_id="run-component",
+            outputs={
+                "run_id": "run-component",
+                "splat_path": str(splat_path),
+                "splat_count": 1,
+                "format": "spark.ply",
+                "summary": "ok",
+            },
+            error=None,
+        )
+
+    monkeypatch.setattr("wt_splatting.components.reconstruction.api.solvers.solve", fake_solve)
+
+    message = reconstruction.click_button("reconstruct")
+    values = reconstruction.to_dict()["values"]
+    renderer_values = renderer.to_dict()["values"]
+
+    assert message == "Reconstruction complete: ok"
+    assert calls[0][0] == "witwin.splatting.reconstruct_3dgs"
+    assert calls[0][1]["scene"] is owner.scene
+    assert calls[0][1]["config"]["project_root"] == str(project)
+    assert calls[0][1]["config"]["image"]["image_dir"] == "assets/images"
+    assert calls[0][1]["config"]["colmap"]["matcher"] == "sequential"
+    assert calls[0][1]["config"]["training"]["device"] == "cuda"
+    assert calls[0][1]["config"]["export"]["export_format"] == "ply"
+    assert values["status"] == "complete"
+    assert values["last_run_id"] == "run-component"
+    assert values["last_error"] == ""
+    assert renderer_values["splats"]["kind"] == "gaussian_splats"
+    assert renderer_values["splats"]["format"] == "spark.ply"
+    assert renderer_values["splat_count"] == 1
+
+
 class _Context:
     def __init__(self, name: str) -> None:
         self.name = name
         self.position = [0.0, 0.0, 0.0]
         self.parent_id = None
         self.scene = None
+
+
+class _SolverContext:
+    def __init__(self) -> None:
+        self.progress_events = []
+
+    def progress(self, fraction, message) -> None:
+        self.progress_events.append((fraction, message))
+
+
+class _BinaryAssets:
+    def __init__(self) -> None:
+        self.service = BinaryAssetService()
+
+
+class _ComponentServer:
+    def __init__(self, project_root: Path) -> None:
+        self.project_root = Path(project_root)
+        self.handlers = {"binary_assets": _BinaryAssets()}
+
+
+class _ComponentScene:
+    def __init__(self, project_root: Path) -> None:
+        self._server = _ComponentServer(project_root)
+        self.project_root = Path(project_root)
+        self.events = []
+
+    def _emit(self, event_type, **payload) -> None:
+        self.events.append((event_type, payload))
+
+
+class _ComponentOwner:
+    id = "splat-recon-object"
+
+    def __init__(self, project_root: Path) -> None:
+        self.scene = _ComponentScene(project_root)
+        self._components = {}
+
+    def add_component(self, component) -> None:
+        component._owner = self
+        self._components[component._component_name] = component
+
+    def get_component(self, name: str):
+        return self._components.get(name)
 
 
 def _make_project_images(tmp_path: Path, *, count: int) -> tuple[Path, str]:
