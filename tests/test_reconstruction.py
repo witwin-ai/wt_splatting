@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 import tomllib
+import os
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -463,6 +464,44 @@ def test_component_reconstruct_calls_solver_and_binds_renderer(monkeypatch, tmp_
     assert renderer_values["splats"]["kind"] == "gaussian_splats"
     assert renderer_values["splats"]["format"] == "spark.ply"
     assert renderer_values["splat_count"] == 1
+
+
+@pytest.mark.requires_colmap
+@pytest.mark.skipif(
+    os.environ.get("WT_SPLATTING_ENABLE_REAL_RECON") != "1"
+    or not os.environ.get("WT_SPLATTING_SMOKE_PROJECT")
+    or not os.environ.get("WT_SPLATTING_SMOKE_IMAGE_DIR"),
+    reason="real reconstruction smoke is opt-in",
+)
+def test_real_colmap_smoke_uses_configured_capture() -> None:
+    from wt_splatting.reconstruction.config import ReconstructionConfig
+    from wt_splatting.reconstruction.pipeline import ReconstructionPipeline
+
+    project = Path(os.environ["WT_SPLATTING_SMOKE_PROJECT"])
+    image_dir = os.environ["WT_SPLATTING_SMOKE_IMAGE_DIR"]
+    result = ReconstructionPipeline().run(
+        ReconstructionConfig.from_component_values(
+            {
+                "image_dir": image_dir,
+                "device": os.environ.get("WT_SPLATTING_SMOKE_DEVICE", "cuda"),
+                "max_steps": int(os.environ.get("WT_SPLATTING_SMOKE_MAX_STEPS", "300")),
+            }
+        ),
+        project,
+    )
+
+    assert result.splat_path.exists()
+    assert result.format == "spark.ply"
+
+
+@pytest.mark.requires_gsplat
+@pytest.mark.skipif(os.environ.get("WT_SPLATTING_ENABLE_REAL_RECON") != "1", reason="gsplat smoke is opt-in")
+def test_real_gsplat_dependency_check() -> None:
+    from wt_splatting.reconstruction.gsplat_backend import GsplatBackend
+
+    availability = GsplatBackend().check_available()
+
+    assert availability.available, availability.message
 
 
 class _Context:
