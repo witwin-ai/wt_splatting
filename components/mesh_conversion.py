@@ -21,12 +21,25 @@ class SplatMeshConversionComponent(Component):
     """User-facing controls for converting a 3DGS PLY into a triangle mesh."""
 
     splat_path = string_field("", group="Source")
+    source_path = string_field("", group="Source")
+    method = string_field("density", options=["density", "sugar", "2dgs"], enum_toggle=True, group="Source")
     output_name = string_field("splat_mesh", group="Mesh")
     grid_resolution = int_field(64, min=8, max=256, group="Mesh")
     iso_level = float_field(0.15, min=0.0, step=0.01, group="Mesh")
     opacity_threshold = float_field(0.01, min=0.0, max=1.0, step=0.01, group="Mesh")
     max_gaussians = int_field(50_000, min=1, group="Mesh")
     sigma_radius = float_field(3.0, min=0.25, max=8.0, step=0.25, group="Mesh")
+    full_convergence_steps = int_field(30_000, min=1, group="Backend")
+    backend_script = string_field("", group="Backend")
+    backend_repo = string_field("", group="Backend")
+    backend_python = string_field("", group="Backend")
+    colmap_binary = string_field("colmap", group="2DGS COLMAP")
+    camera_model = string_field("OPENCV", group="2DGS COLMAP")
+    matcher = string_field("sequential", options=["sequential", "exhaustive"], enum_toggle=True, group="2DGS COLMAP")
+    downscale_factor = int_field(1, min=1, group="2DGS COLMAP")
+    max_images = int_field(0, min=0, group="2DGS COLMAP")
+    mesh_resolution = int_field(1024, min=512, max=4096, group="Backend")
+    mesh_cluster_count = int_field(1, min=1, max=1000, group="Backend")
     export_format = string_field("ply", options=["ply"], enum_toggle=True, group="Export")
 
     status = string_field("idle", readonly=True, group="Status")
@@ -91,7 +104,19 @@ class SplatMeshConversionComponent(Component):
     def _solver_config(self) -> dict[str, Any]:
         return {
             "project_root": str(self._project_root()),
-            "source": {"splat_path": str(self.splat_path)},
+            "source": {
+                "method": str(self.method),
+                "splat_path": str(self.splat_path),
+                "source_path": str(self.source_path or self.splat_path),
+                "backend_script": str(self.backend_script),
+                "backend_repo": str(self.backend_repo),
+                "backend_python": str(self.backend_python),
+                "colmap_binary": str(self.colmap_binary),
+                "camera_model": str(self.camera_model),
+                "matcher": str(self.matcher),
+                "downscale_factor": int(self.downscale_factor),
+                "max_images": int(self.max_images),
+            },
             "mesh": {
                 "output_name": str(self.output_name),
                 "grid_resolution": int(self.grid_resolution),
@@ -99,6 +124,9 @@ class SplatMeshConversionComponent(Component):
                 "opacity_threshold": float(self.opacity_threshold),
                 "max_gaussians": int(self.max_gaussians),
                 "sigma_radius": float(self.sigma_radius),
+                "full_convergence_steps": int(self.full_convergence_steps),
+                "mesh_resolution": int(self.mesh_resolution),
+                "mesh_cluster_count": int(self.mesh_cluster_count),
                 "export_format": str(self.export_format),
             },
         }
