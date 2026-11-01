@@ -151,7 +151,10 @@ class _Server:
         self.handlers = {"binary_assets": _BinaryAssets()}
 
     def get_scene(self, scene_id: str | None = None):
-        return self.scene
+        # One current scene, like the ProjectServer: any other id is not loaded.
+        if not scene_id or scene_id == self.scene.scene_id:
+            return self.scene
+        return None
 
     async def broadcast(self, *args, **kwargs) -> None:
         pass
