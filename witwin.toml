@@ -23,7 +23,7 @@ lifecycle = "warm"
 maxParallel = 1
 
 [contributes.solvers.runtime]
-python = "${backend:python}"
+python = "${project:python}"
 
 [contributes.solvers.capabilities]
 cancel = true
@@ -37,7 +37,7 @@ lifecycle = "warm"
 maxParallel = 1
 
 [contributes.solvers.runtime]
-python = "${backend:python}"
+python = "${project:python}"
 
 [contributes.solvers.capabilities]
 cancel = true

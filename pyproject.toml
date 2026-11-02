@@ -19,7 +19,7 @@ description = "Gaussian Splatting renderers and data loaders."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-  "witwin-studio>=0.1,<0.2",
+  "witwin-studio>=0.1.2,<0.2",
   "numpy",
   "trimesh",
   "Pillow",
