@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
+PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "server"))
 sys.path.insert(0, str(ROOT / "plugins"))
 
@@ -555,7 +556,7 @@ def test_official_adapter_run_logged_adds_backend_python_runtime_paths(tmp_path:
 
 
 def test_official_adapter_help_runs_from_foreign_cwd(tmp_path: Path) -> None:
-    adapter = ROOT / "plugins" / "wt_splatting" / "tools" / "adapters" / "sugar_official.py"
+    adapter = PLUGIN_ROOT / "tools" / "adapters" / "sugar_official.py"
 
     completed = subprocess.run(
         [sys.executable, str(adapter), "--help"],
@@ -629,7 +630,7 @@ def test_mesh_solver_host_rejects_mismatched_config_project_root(tmp_path: Path)
 
 
 def test_mesh_solver_manifest_uses_supported_warm_lifecycle() -> None:
-    manifest = tomllib.loads((ROOT / "plugins" / "wt_splatting" / "witwin.toml").read_text(encoding="utf-8"))
+    manifest = tomllib.loads((PLUGIN_ROOT / "witwin.toml").read_text(encoding="utf-8"))
     solvers = {item["id"]: item for item in manifest["contributes"]["solvers"]}
 
     assert solvers["witwin.splatting.splat_to_mesh"]["lifecycle"] == "warm"

@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
+PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "server"))
 sys.path.insert(0, str(ROOT / "plugins"))
 
@@ -466,7 +467,7 @@ def test_pipeline_reports_export_phase_failures(tmp_path: Path) -> None:
 
 
 def test_solver_manifest_declares_reconstruction_solver() -> None:
-    manifest = tomllib.loads((ROOT / "plugins" / "wt_splatting" / "witwin.toml").read_text(encoding="utf-8"))
+    manifest = tomllib.loads((PLUGIN_ROOT / "witwin.toml").read_text(encoding="utf-8"))
 
     solver = next(item for item in manifest["contributes"]["solvers"] if item["id"] == "witwin.splatting.reconstruct_3dgs")
 
@@ -474,7 +475,7 @@ def test_solver_manifest_declares_reconstruction_solver() -> None:
     assert solver["entry"] == "solver_host.py"
     assert solver["lifecycle"] == "warm"
     assert solver["maxParallel"] == 1
-    assert solver["runtime"]["python"] == "${backend:python}"
+    assert solver["runtime"]["python"] == "${project:python}"
     assert solver["capabilities"]["cancel"] is True
     assert solver["capabilities"]["partials"] is True
 
