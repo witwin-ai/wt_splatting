@@ -6,7 +6,7 @@ import test from 'node:test';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const pluginRoot = path.resolve(__dirname, '../..');
-const repoRoot = path.resolve(__dirname, '../../../..');
+const studioDir = process.env.WITWIN_STUDIO_DIR ?? path.resolve(__dirname, '../../../../witwin-studio/studio');
 
 function readPluginFile(relativePath) {
   return fs.readFileSync(path.join(pluginRoot, relativePath), 'utf8');
@@ -34,7 +34,7 @@ test('declares the splatting viewport host and shader permission', () => {
 
   assert.match(manifest, /id = "witwin\.splatting"/);
   assert.match(manifest, /entry = "viewport\.js"/);
-  assert.match(manifest, /sdkVersion = "1\.0\.0"/);
+  assert.match(manifest, /sdkVersion = "2\.0\.0"/);
   assert.match(manifest, /frontend = true/);
   assert.match(manifest, /shader = true/);
 });
@@ -172,8 +172,16 @@ test('installs SparkRenderer into the R3F scene for 3DGS SplatMesh rendering', (
 });
 
 test('does not rely on old Studio Gaussian splat SDK helpers', () => {
-  assert.equal(fs.existsSync(path.join(repoRoot, 'studio/src/features/viewport/host/types.ts')), true);
-  assert.doesNotMatch(fs.readFileSync(path.join(repoRoot, 'studio/src/features/viewport/host/types.ts'), 'utf8'), /GaussianSplatResource/);
-  assert.doesNotMatch(fs.readFileSync(path.join(repoRoot, 'studio/packages/witwin-viewport/src/index.ts'), 'utf8'), /loadGaussianSplats/);
-  assert.doesNotMatch(fs.readFileSync(path.join(repoRoot, 'studio/src/features/viewport/host/assetApi.ts'), 'utf8'), /loadGaussianSplats/);
+  assert.equal(fs.existsSync(path.join(studioDir, 'src/features/viewport/host/types.ts')), true);
+  assert.doesNotMatch(fs.readFileSync(path.join(studioDir, 'src/features/viewport/host/types.ts'), 'utf8'), /GaussianSplatResource/);
+  assert.doesNotMatch(fs.readFileSync(path.join(studioDir, 'packages/witwin-host/src/index.ts'), 'utf8'), /loadGaussianSplats/);
+  assert.doesNotMatch(fs.readFileSync(path.join(studioDir, 'src/features/viewport/host/assetApi.ts'), 'utf8'), /loadGaussianSplats/);
+});
+
+test('the bundle is an SDK 2 plugin definition', () => {
+  const bundle = readPluginFile('web/viewport.js');
+  assert.match(bundle, /sdkVersion = "2\.0\.0"/);
+  assert.match(bundle, /id: "witwin\.splatting"/);
+  assert.match(bundle, /as default/);
+  assert.doesNotMatch(bundle, /export function activate|assets\.resolve\(/);
 });

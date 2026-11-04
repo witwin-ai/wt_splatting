@@ -1,4 +1,4 @@
-import type { ViewportHost } from './sdk/types';
+import type { FrontendHost } from '@witwin/host';
 import SplattingVisualizer, { matchesSplattingObject } from './gizmos/SplattingVisualizer';
 import PointCloudVisualizer, { pointCloudVisualizerConfig } from './gizmos/PointCloudVisualizer';
 import { React } from './runtime';
@@ -10,7 +10,7 @@ function findComponent(object: any, predicate: (component: any) => boolean): any
 
 let disposables: Array<{ dispose(): void }> = [];
 
-export function activateSplattingViewport(host: ViewportHost): void {
+export function activateSplattingViewport(host: FrontendHost): void {
   disposables.push(
     host.registerVisualizer({
       id: 'witwin.splatting.gaussianSplatRenderer',

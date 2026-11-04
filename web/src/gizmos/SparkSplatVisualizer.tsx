@@ -1,7 +1,7 @@
 import { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
 import { React, THREE, useEffect, useState, useThree } from '../runtime';
 import type * as ThreeTypes from 'three';
-import type { ViewportAssetsApi } from '../sdk/types';
+import type { ViewportAssetsApi } from '@witwin/host';
 import type { SplatRendererData } from '../data/extractSplatComponent';
 import { Marker, disableRaycast, hasReadableSparkSuffix } from './utils';
 
@@ -24,7 +24,8 @@ export default function SparkSplatVisualizer({ data, assets }: { data: SplatRend
 
     async function load(): Promise<void> {
       try {
-        const url = assets.resolve(data.ref);
+        const url = await assets.signedUrl(data.ref);
+        if (cancelled) return;
         if (!hasReadableSparkSuffix(url)) {
           throw new Error('Spark splat URL must preserve .ply/.spz/.splat/.ksplat/.sog/.zip/.rad suffix.');
         }

@@ -1,12 +1,16 @@
-import type { ViewportHost } from './sdk/types';
+import type { PluginDefinition } from '@witwin/host';
 import { activateSplattingViewport, deactivateSplattingViewport } from './activate';
 
-export const sdkVersion = '1.0.0';
+export const sdkVersion = '2.0.0';
 
-export function activate(host: ViewportHost): void {
-  activateSplattingViewport(host);
-}
+const plugin: PluginDefinition = {
+  id: 'witwin.splatting',
+  activate(host) {
+    activateSplattingViewport(host);
+  },
+  deactivate() {
+    deactivateSplattingViewport();
+  },
+};
 
-export function deactivate(): void {
-  deactivateSplattingViewport();
-}
+export default plugin;

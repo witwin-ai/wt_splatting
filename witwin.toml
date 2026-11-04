@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "Gaussian Splatting renderers and data loaders."
 repository = "https://github.com/witwin-ai/wt_splatting"
 enabled = true
+# The web half only adds visualizers to the viewport.
+pluginDependencies = [{ id = "studio.viewport", optional = true }]
 
 [engines]
 witwin = "^1.0.0"
@@ -13,7 +15,7 @@ root = "web"
 
 [contributes.viewport.host]
 entry = "viewport.js"
-sdkVersion = "1.0.0"
+sdkVersion = "2.0.0"
 
 [[contributes.solvers]]
 id = "witwin.splatting.reconstruct_3dgs"

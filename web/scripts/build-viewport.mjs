@@ -1,12 +1,19 @@
-import fs from 'node:fs';
+import fs, { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const packageRoot = path.resolve(here, '..');
-const repoRoot = path.resolve(packageRoot, '..', '..', '..');
-const requireFromStudio = createRequire(path.join(repoRoot, 'studio', 'package.json'));
+// esbuild, semver and Studio's three version come from a Studio checkout. Plugin
+// repos normally sit next to it (E:\Code\witwin-plugins\<id> beside
+// E:\Code\witwin-studio); WITWIN_STUDIO_DIR points at another studio/ folder,
+// for example a worktree.
+const codeRoot = path.resolve(packageRoot, '..', '..', '..');
+const studioDir = process.env.WITWIN_STUDIO_DIR
+  ?? [path.join(codeRoot, 'witwin-studio', 'studio'), path.join(codeRoot, 'studio')].find((dir) => existsSync(path.join(dir, 'package.json')));
+if (!studioDir) throw new Error('[wt_splatting] Studio checkout not found; set WITWIN_STUDIO_DIR to its studio/ folder');
+const requireFromStudio = createRequire(path.join(studioDir, 'package.json'));
 const requireFromPlugin = createRequire(path.join(packageRoot, 'package.json'));
 const esbuild = requireFromStudio('esbuild');
 const semver = requireFromStudio('semver');
@@ -17,9 +24,10 @@ const analyze = args.has('--analyze');
 const threeHost = path.join(packageRoot, 'src/vendor/three-host.ts');
 const sparkPkgPath = findPackageJson(requireFromPlugin.resolve('@sparkjsdev/spark'));
 const sparkPkg = JSON.parse(fs.readFileSync(sparkPkgPath, 'utf8'));
-const studioPkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'studio', 'package.json'), 'utf8'));
+const studioPkg = JSON.parse(fs.readFileSync(path.join(studioDir, 'package.json'), 'utf8'));
 
-verifySparkThreeCompatibility(studioPkg.dependencies?.three, sparkPkg);
+// Renderer libraries are devDependencies of Studio (CLAUDE.md, Electron packaging).
+verifySparkThreeCompatibility(studioPkg.dependencies?.three ?? studioPkg.devDependencies?.three, sparkPkg);
 verifyThreeShimCoverage();
 
 const singletonAliases = new Map([

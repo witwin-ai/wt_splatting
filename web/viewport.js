@@ -14575,7 +14575,8 @@ function SparkSplatVisualizer({ data, assets }) {
     setMesh(null);
     async function load() {
       try {
-        const url = assets.resolve(data.ref);
+        const url = await assets.signedUrl(data.ref);
+        if (cancelled) return;
         if (!hasReadableSparkSuffix(url)) {
           throw new Error("Spark splat URL must preserve .ply/.spz/.splat/.ksplat/.sog/.zip/.rad suffix.");
         }
@@ -15085,15 +15086,18 @@ function deactivateSplattingViewport() {
 }
 
 // src/viewport.ts
-var sdkVersion = "1.0.0";
-function activate(host) {
-  activateSplattingViewport(host);
-}
-function deactivate() {
-  deactivateSplattingViewport();
-}
+var sdkVersion = "2.0.0";
+var plugin = {
+  id: "witwin.splatting",
+  activate(host) {
+    activateSplattingViewport(host);
+  },
+  deactivate() {
+    deactivateSplattingViewport();
+  }
+};
+var viewport_default = plugin;
 export {
-  activate,
-  deactivate,
+  viewport_default as default,
   sdkVersion
 };

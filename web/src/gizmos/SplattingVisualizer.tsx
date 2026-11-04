@@ -1,5 +1,5 @@
 import { React } from '../runtime';
-import type { HostSceneObject, ViewportAssetsApi } from '../sdk/types';
+import type { HostSceneObject, ViewportAssetsApi } from '@witwin/host';
 import { findSplatComponent, hasSplatRendererComponent } from '../data/extractSplatComponent';
 import Quad2DGSVisualizer from './Quad2DGSVisualizer';
 import SparkSplatVisualizer from './SparkSplatVisualizer';

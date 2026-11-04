@@ -1,4 +1,4 @@
-import type { HostSceneObject, RenderResourceRef } from '../sdk/types';
+import type { HostSceneObject, RenderResourceRef } from '@witwin/host';
 
 export type SplatKind = '3dgs' | '2dgs';
 export type SplatSortMode = 'gpu_depth' | 'gpu_weighted';

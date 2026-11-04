@@ -2,7 +2,7 @@ import { parseW2gs, type TwoDGaussianSplats } from '../data/load2dgs';
 import type * as ReactTypes from 'react';
 import type * as ThreeTypes from 'three';
 import type { SplatRendererData } from '../data/extractSplatComponent';
-import type { ViewportAssetsApi } from '../sdk/types';
+import type { ViewportAssetsApi } from '@witwin/host';
 import { React, THREE, useEffect, useFrame, useMemo, useRef, useState, useThree } from '../runtime';
 import { checkGpuCapabilities } from '../gpu/checkGpuCapabilities';
 import { DepthKeyPass } from '../gpu/DepthKeyPass';

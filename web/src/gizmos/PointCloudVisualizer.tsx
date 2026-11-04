@@ -15,7 +15,7 @@ import { React, THREE, useCallback, useEffect, useMemo, useRef, useState, useThr
 import type { ThreeEvent } from '../runtime';
 import { VisualizerConfig, VisualizerProps } from './types';
 import { getComponentValue } from './utils';
-import type { RenderResourceRef, ViewportAssetsApi } from '../sdk/types';
+import type { RenderResourceRef, ViewportAssetsApi } from '@witwin/host';
 
 interface PointCloudComponentData {
   point_count: number;
