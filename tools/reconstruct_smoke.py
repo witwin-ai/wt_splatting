@@ -12,7 +12,7 @@ for path in (REPO_ROOT / "server", REPO_ROOT / "plugins"):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from witwin_server.features.assets.binary.service import BinaryAssetService  # noqa: E402
+from witwin_server.api import BinaryAssetService  # noqa: E402
 from wt_splatting.io.loaders import register_3d_splats_runtime_file  # noqa: E402
 from wt_splatting.reconstruction.config import ReconstructionConfig  # noqa: E402
 from wt_splatting.reconstruction.pipeline import ReconstructionPipeline  # noqa: E402

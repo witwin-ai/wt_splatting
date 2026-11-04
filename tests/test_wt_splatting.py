@@ -10,9 +10,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "server"))
 sys.path.insert(0, str(ROOT / "plugins"))
 
-from witwin_server.features.assets.binary.service import BinaryAssetService
-from witwin_server.features.assets.binary.refs import POINT_CLOUD_FORMAT
-from witwin_server.features.library.service import LibraryHandler
+from witwin_server.api import BinaryAssetService, POINT_CLOUD_FORMAT, Library as LibraryHandler
 
 
 def test_component_defaults() -> None:
@@ -357,7 +355,7 @@ class _LibraryServer:
     main_scene_id = "default"
 
     def __init__(self) -> None:
-        from witwin_server.core import Scene
+        from witwin_server.api import Scene
 
         self.scene = Scene(scene_id=self.main_scene_id, role="main")
         self.scene._server = self

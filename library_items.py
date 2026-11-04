@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from witwin_server import Library, SceneObject
-from witwin_server.core.components import MeshComponent
+from witwin_server.api import Library, SceneObject, MeshComponent
 
 from .components.mesh_conversion import SplatMeshConversionComponent
 from .components.point_cloud import PointCloudsComponent

@@ -11,7 +11,7 @@ if str(PLUGIN_PARENT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_PARENT))
 
 import wt_splatting  # noqa: E402,F401
-from witwin_server.features.solvers.sdk import serve  # noqa: E402
+from witwin.studio.solver import serve  # noqa: E402
 from wt_splatting.reconstruction.config import ReconstructionConfig  # noqa: E402
 from wt_splatting.reconstruction.pipeline import ReconstructionPipeline  # noqa: E402
 

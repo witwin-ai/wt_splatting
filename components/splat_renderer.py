@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import numpy as np
 
-from witwin_server.core.components.core import (
+from witwin_server.api import (
     Component,
     bool_field,
     button,
@@ -14,8 +14,8 @@ from witwin_server.core.components.core import (
     float_field,
     int_field,
     string_field,
+    BinaryAssetService,
 )
-from witwin_server.features.assets.binary.service import BinaryAssetService
 
 from ..io.formats import GAUSSIAN_SPLATS_KIND, WITWIN_2DGS_QUAD_FORMAT
 from ..io.loaders import register_2d_splats_arrays

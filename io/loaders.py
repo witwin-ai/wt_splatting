@@ -6,8 +6,7 @@ from typing import Any
 
 import numpy as np
 
-from witwin_server.features.assets.binary.refs import RenderResourceRef
-from witwin_server.features.assets.binary.service import BinaryAssetService
+from witwin_server.api import RenderResourceRef, BinaryAssetService
 
 from .formats import (
     GAUSSIAN_SPLATS_2D_KIND,

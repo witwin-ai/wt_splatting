@@ -6,10 +6,16 @@ import re
 from pathlib import Path
 from typing import Any
 
-from witwin_server import Notifications
-from witwin_server.api import api
-from witwin_server.core.components.core import Component, button, component, int_field, string_field
-from witwin_server.features.assets.binary.service import BinaryAssetService
+from witwin_server.api import (
+    Notifications,
+    api,
+    Component,
+    button,
+    component,
+    int_field,
+    string_field,
+    BinaryAssetService,
+)
 
 from ..io.loaders import register_3d_splats_runtime_file
 

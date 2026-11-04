@@ -8,10 +8,17 @@ from typing import Any
 import numpy as np
 import trimesh
 
-from witwin_server import Notifications
-from witwin_server.api import api
-from witwin_server.core.components import MeshComponent
-from witwin_server.core.components.core import Component, button, component, float_field, int_field, string_field
+from witwin_server.api import (
+    Notifications,
+    api,
+    MeshComponent,
+    Component,
+    button,
+    component,
+    float_field,
+    int_field,
+    string_field,
+)
 
 SOLVER_ID = "witwin.splatting.splat_to_mesh"
 

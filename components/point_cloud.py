@@ -13,11 +13,17 @@ import numpy as np
 import struct
 import json
 
-from witwin_server.core.components.core import (
-    Component, component, button,
-    string_field, float_field, int_field, bool_field
+from witwin_server.api import (
+    Component,
+    component,
+    button,
+    string_field,
+    float_field,
+    int_field,
+    bool_field,
+    POINT_CLOUD_FORMAT,
+    Notifications,
 )
-from witwin_server.features.assets.binary.refs import POINT_CLOUD_FORMAT
 
 
 @component(name="PointClouds", category="Visual/Geometry")
@@ -421,19 +427,10 @@ class PointCloudsComponent(Component):
         # Calculate size
         size_mb = len(data) / (1024 * 1024)
 
-        # Send success notification
-        try:
-            from importlib import import_module
-
-            Notifications = import_module(
-                "witwin_server.features.notifications.handlers"
-            ).NotificationsHandler
-            Notifications.success(
-                "Point Cloud Cached",
-                f"Cached {ref.asset_id} ({self.point_count} points, {size_mb:.2f} MB)"
-            )
-        except ImportError:
-            pass
+        Notifications.success(
+            "Point Cloud Cached",
+            f"Cached {ref.asset_id} ({self.point_count} points, {size_mb:.2f} MB)"
+        )
 
         return f"Cached point cloud: {ref.asset_id} ({self.point_count} points, {size_mb:.2f} MB)"
 
@@ -482,19 +479,10 @@ class PointCloudsComponent(Component):
         # Auto-export after generation
         export_result = self.export_point_cloud()
 
-        # Send info notification
-        try:
-            from importlib import import_module
-
-            Notifications = import_module(
-                "witwin_server.features.notifications.handlers"
-            ).NotificationsHandler
-            Notifications.info(
-                "Random Points Generated",
-                f"Generated {n_points} random points in a sphere"
-            )
-        except ImportError:
-            pass
+        Notifications.info(
+            "Random Points Generated",
+            f"Generated {n_points} random points in a sphere"
+        )
 
         return f"Generated {n_points} random points. {export_result}"
 

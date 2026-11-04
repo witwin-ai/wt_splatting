@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "server"))
 sys.path.insert(0, str(ROOT / "plugins"))
 
-from witwin_server.features.assets.binary.service import BinaryAssetService
+from witwin_server.api import BinaryAssetService
 
 
 def test_reconstruction_component_defaults_and_solver_button() -> None:
