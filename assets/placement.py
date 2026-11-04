@@ -2,9 +2,10 @@
 
 Studio sends this op when a ``.wtsplat`` file is dropped on the viewport or
 placed from the Project panel (``createSplatAssetObject`` in Studio's
-``features/assets/assetPlacement.ts``). ``scene.apply`` routes the op to the
-handler this Plugin registers with ``ctx.handlers.register``, so the op log
-records the new object like any other scene edit. The code lived in Studio's
+``features/assets/assetPlacement.ts``). ``scene.apply`` runs the op this
+Plugin adds with studio.scene's ``provide_scene_op``, so the op log records
+the new object like any other scene edit. (Until D16 P9 it was a raw message
+handler, ``ctx.handlers.register``, which Studio removed.) The code lived in Studio's
 kernel until 2026-11-03, where it had to import this Plugin (D16 review,
 B-SPLAT).
 """
@@ -26,6 +27,8 @@ from witwin_server.api import (
     resolve_project_path,
 )
 
+from witwin_server.plugins_builtin.scene.api import provide_scene_op
+
 from .splat_manifest import read_wtsplat_manifest
 
 logger = get_logger("SplatAssets")
@@ -35,11 +38,11 @@ MESSAGE = "splat_asset_create_object"
 
 
 def register(ctx: PluginContext) -> None:
-    """Answer ``splat_asset_create_object`` once the server runs (``ctx.handlers`` needs it)."""
-    def start(_event: Any = None) -> None:
-        ctx.handlers.register(MESSAGE, lambda data, _client: create_splat_object(ctx.api.server, data))
+    """Serve the ``splat_asset_create_object`` scene op; unloading the Plugin removes it."""
+    async def op(server: Any, message: Dict[str, Any], _client: Any) -> Dict[str, Any]:
+        return await create_splat_object(server, message)
 
-    ctx.on_startup(start)
+    ctx.track(provide_scene_op(MESSAGE, op))
 
 
 async def create_splat_object(server: Any, data: Dict[str, Any]) -> Dict[str, Any]:

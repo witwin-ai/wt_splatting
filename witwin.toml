@@ -5,7 +5,7 @@ description = "Gaussian Splatting renderers and data loaders."
 repository = "https://github.com/witwin-ai/wt_splatting"
 enabled = true
 # The web half only adds visualizers to the viewport.
-pluginDependencies = [{ id = "studio.viewport", optional = true }]
+pluginDependencies = [{ id = "studio.viewport", optional = true }, { id = "studio.scene" }]
 
 [engines]
 witwin = "^2.0.0"
