@@ -1,3 +1,8 @@
 __pycache__/
 *.py[cod]
 web/node_modules/
+
+# Python packaging output
+build/
+dist/
+*.egg-info/
