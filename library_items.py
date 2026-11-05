@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 
 from witwin_server.api import Library, SceneObject, MeshComponent
@@ -8,6 +10,21 @@ from .components.mesh_conversion import SplatMeshConversionComponent
 from .components.point_cloud import PointCloudsComponent
 from .components.reconstruction import SplatReconstructionComponent
 from .components.splat_renderer import GaussianSplatRendererComponent
+
+
+_PREVIEWS = Path(__file__).resolve().parent / "previews" / "library"
+
+
+def _preview(item_id):
+    """The Library card image for an item, as keyword arguments.
+
+    Images are renders from Studio's `scripts/template-previews/library_items.py`.
+    Empty when the file is missing, so the card falls back to the item's icon.
+    """
+    path = _PREVIEWS / f"{item_id}.webp"
+    if not path.is_file():
+        return {}
+    return {"preview": str(path)}
 
 
 _CATEGORY = "splatting"
@@ -82,7 +99,7 @@ def register() -> None:
         icon="sparkles",
         object_type="empty",
         factory=_make_3dgs_demo,
-        description="3D Gaussian Splat renderer with an in-component random generator",
+        description="3D Gaussian Splat renderer with an in-component random generator", **_preview("splatting_3dgs_demo"),
     )
     Library.register_item(
         "splatting_2dgs_demo",
@@ -91,7 +108,7 @@ def register() -> None:
         icon="scatter-chart",
         object_type="empty",
         factory=_make_2dgs_demo,
-        description="2D Gaussian Splat renderer with an in-component random generator",
+        description="2D Gaussian Splat renderer with an in-component random generator", **_preview("splatting_2dgs_demo"),
     )
     Library.register_item(
         "splatting_3dgs_reconstruction",
@@ -100,7 +117,7 @@ def register() -> None:
         icon="sparkles",
         object_type="empty",
         factory=_make_3dgs_reconstruction,
-        description="Image sequence reconstruction workflow for Spark-compatible 3D Gaussian Splats",
+        description="Image sequence reconstruction workflow for Spark-compatible 3D Gaussian Splats", **_preview("splatting_3dgs_reconstruction"),
     )
     Library.register_item(
         "splatting_3dgs_meshization",
@@ -109,7 +126,7 @@ def register() -> None:
         icon="triangle",
         object_type="mesh",
         factory=_make_3dgs_meshization,
-        description="Convert a 3DGS PLY into a triangle mesh using density-field marching cubes",
+        description="Convert a 3DGS PLY into a triangle mesh using density-field marching cubes", **_preview("splatting_3dgs_meshization"),
     )
     Library.register_item(
         "pointclouds",
@@ -118,7 +135,7 @@ def register() -> None:
         icon="scattered-points",
         object_type="pointcloud",
         factory=_make_pointcloud_demo,
-        description="Point cloud renderer with generated point data",
+        description="Point cloud renderer with generated point data", **_preview("pointclouds"),
     )
 
 
